@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trò chơi: Ghép Thẻ Hóa Học</title>
+    <style>
+        /* Giao diện màu sắc tươi sáng */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            color: #333;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 25px;
+            width: 95%;
+            max-width: 900px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        h1 { color: #8e44ad; margin-bottom: 5px; }
+        h2 { color: #e84393; margin-top: 0; font-size: 18px; }
+        .hidden { display: none !important; }
+        
+        /* Form nhập liệu */
+        input[type="text"] {
+            width: 80%;
+            max-width: 300px;
+            padding: 12px;
+            margin: 10px 0;
+            border: 2px solid #a29bfe;
+            border-radius: 10px;
+            font-size: 16px;
+            outline: none;
+        }
+        input[type="text"]:focus { border-color: #6c5ce7; }
+        
+        /* Nút bấm */
+        .btn {
+            background-color: #0984e3;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.3s;
+            margin: 10px 5px;
+            font-weight: bold;
+        }
+        .btn:hover { background-color: #74b9ff; transform: translateY(-2px); }
+
+        /* Khu vực Game (2 cột) */
+        .status-bar {
+            background: #ffeaa7;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #d63031;
+            margin-bottom: 20px;
+        }
+        .columns-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        .column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .col-title {
+            font-weight: bold;
+            font-size: 18px;
+            color: #fff;
+            background: #6c5ce7;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        
+        /* Thẻ ghép */
+        .card {
+            background: #f1f2f6;
+            border: 2px solid #dfe4ea;
+            border-radius: 10px;
+            padding: 15px 10px;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.4;
+        }
+        .card:hover { background: #dfe4ea; transform: scale(1.02); }
+        .card.selected-a { background: #fdcb6e; border-color: #e1b12c; font-weight: bold; color: #2d3436; }
+        .card.selected-b { background: #81ecec; border-color: #00cec9; font-weight: bold; color: #2d3436; }
+        .card.matched { background: #55efc4; border-color: #00b894; color: #2d3436; visibility: hidden; } /* Ẩn thẻ khi ghép đúng */
+
+        /* Hiệu ứng Feedback (Pop-up giữa màn hình) */
+        #feedback-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        #feedback-msg { font-size: 40px; font-weight: bold; margin-bottom: 20px; }
+        
+        /* Ngôi sao */
+        .star {
+            position: absolute;
+            color: #f1c40f;
+            font-size: 40px;
+            animation: pop 1s ease-out forwards;
+            pointer-events: none;
+        }
+        @keyframes pop {
+            0% { transform: scale(0) rotate(0deg); opacity: 1; }
+            100% { transform: scale(2) rotate(360deg) translateY(-50px); opacity: 0; }
+        }
+
+        /* Bảng xếp hạng */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: center; }
+        th { background-color: #a29bfe; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="app">
+    
+    <div id="login-screen">
+        <h1>🔗 Trò Chơi Ghép Thẻ 🔗</h1>
+        <h2>Chủ đề: Sự biến đổi tính chất các nguyên tố</h2>
+        <p>Chọn 1 thẻ ở Cột A và 1 thẻ tương ứng ở Cột B để ghép lại thành một câu hoàn chỉnh.</p>
+        <input type="text" id="playerName" placeholder="Nhập Họ và Tên của bạn" required><br>
+        <input type="text" id="playerClass" placeholder="Nhập Lớp của bạn" required><br>
+        <button class="btn" onclick="startGame()">Bắt Đầu Chơi</button>
+    </div>
+
+    <div id="game-screen" class="hidden">
+        <div class="status-bar">
+            <span>⭐ Số câu đúng: <span id="score">0</span> / 10</span>
+        </div>
+        
+        <div class="columns-container">
+            <div class="column" id="col-a">
+                <div class="col-title">Cột A (Vế trước)</div>
+                </div>
+            <div class="column" id="col-b">
+                <div class="col-title">Cột B (Vế sau)</div>
+                </div>
+        </div>
+        
+        <div id="feedback-overlay" class="hidden">
+            <div id="feedback-msg"></div>
+        </div>
+    </div>
+
+    <div id="end-screen" class="hidden">
+        <h1>🎉 Hoàn Thành Xuất Sắc! 🎉</h1>
+        <h2>Điểm của bạn: <span id="final-score">0</span> điểm</h2>
+        <h3>Bảng Xếp Hạng</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Hạng</th>
+                    <th>Họ Tên</th>
+                    <th>Lớp</th>
+                    <th>Điểm</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard-body"></tbody>
+        </table>
+        <button class="btn" onclick="location.reload()">Chơi Lại</button>
+    </div>
+
+</div>
+
+<script>
+    // Audio Context cho hiệu ứng âm thanh
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playTingTing() {
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1000, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1500, audioCtx.currentTime + 0.1);
+        gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.3);
+    }
+
+    function playBzzzz() {
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5
